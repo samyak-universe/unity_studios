@@ -396,7 +396,19 @@
     <div class="game-panel">
       <div class="game-header">
         <h3 id="gameTitle">Game Title</h3>
-        <button class="close-game" onclick="closeGame()">×</button>
+        <div class="game-header-btns">
+          <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleGameFullscreen()" aria-label="Toggle fullscreen">
+            <svg id="fsExpandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+              <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            <svg id="fsCompressIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="display:none">
+              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+              <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+            </svg>
+          </button>
+          <button class="close-game" onclick="closeGame()">×</button>
+        </div>
       </div>
       <div class="game-content">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
