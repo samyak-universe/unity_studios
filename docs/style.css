@@ -1228,9 +1228,10 @@ a.contact-value:hover { color: var(--cyan); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.3);
+  flex-shrink: 0;
 }
 .game-header h3 {
   font-family: var(--font-head);
@@ -1239,6 +1240,25 @@ a.contact-value:hover { color: var(--cyan); }
   color: #fff;
   margin: 0;
 }
+.game-header-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fullscreen-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--trans), border-color var(--trans), background var(--trans);
+}
+.fullscreen-btn:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(56,189,248,0.08); }
 .close-game {
   background: none;
   border: none;
@@ -1268,6 +1288,47 @@ a.contact-value:hover { color: var(--cyan); }
   background: #000;
   max-width: 100%;
   height: auto;
+}
+
+/* ── Fullscreen mode ── */
+.game-panel:fullscreen,
+.game-panel:-webkit-full-screen,
+.game-panel:-moz-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: none;
+  top: 0; left: 0;
+  position: fixed;
+  background: #050812;
+}
+.game-panel:fullscreen .game-content,
+.game-panel:-webkit-full-screen .game-content,
+.game-panel:-moz-full-screen .game-content {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+}
+.game-panel:fullscreen #gameCanvas,
+.game-panel:-webkit-full-screen #gameCanvas,
+.game-panel:-moz-full-screen #gameCanvas {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 4px;
+}
+.game-panel:fullscreen .game-footer,
+.game-panel:-webkit-full-screen .game-footer,
+.game-panel:-moz-full-screen .game-footer {
+  padding: 10px 20px;
+  flex-shrink: 0;
 }
 .game-footer {
   padding: 20px 24px;
