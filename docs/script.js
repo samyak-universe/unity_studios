@@ -270,7 +270,8 @@ sections.forEach(s => scrollSpy.observe(s));
 
 const games = [
   { id: 'breakout', name: 'Breakout Blocks', icon: '🧱', desc: 'Break all blocks', reward: 140 },
-  { id: 'worldly', name: 'Worldly', icon: '🌐', desc: 'Guess the 5-letter word', reward: 160 }
+  { id: 'worldly', name: 'Worldly', icon: '🌐', desc: 'Guess the 5-letter word', reward: 160 },
+  { id: 'sudoku', name: 'Sudoku', icon: '🔢', desc: 'Fill the 9×9 grid', reward: 180 }
 ];
 
 let currentGame = null;
@@ -336,6 +337,7 @@ function openGame(gameId) {
   if (!currentGame) return;
   document.getElementById('gameModal').classList.add('open');
   document.getElementById('gameTitle').textContent = currentGame.name;
+  _gameScoreEl = document.getElementById('gameScore');
   _gameScoreEl.textContent = '0';
   document.getElementById('gamePlayBtn').style.display = 'block';
   document.getElementById('gameStopBtn').style.display = 'none';
@@ -396,6 +398,7 @@ function startGame() {
   switch(currentGame.id) {
     case 'breakout': playBreakout(canvas, ctx); break;
     case 'worldly': playWorldly(canvas, ctx); break;
+    case 'sudoku': playSudoku(canvas, ctx); break;
   }
 }
 
@@ -639,6 +642,201 @@ function playWorldly(canvas, ctx) {
       ctx.fillText(`The word was: ${secretWord}`, canvas.width / 2, canvas.height / 2 + 28);
     }
   });
+}
+
+function playSudoku(canvas, ctx) {
+  let solution = new Array(81).fill(0);
+  let puzzle   = new Array(81).fill(0);
+  let userGrid = new Array(81).fill(0);
+  let givens   = new Set();
+  let selected = -1;
+  let completed = false;
+
+  const CELL = 40, GS = CELL * 9;           // 360px grid
+  const OX = (canvas.width - GS) / 2;       // 120 — centered
+  const OY = 12;
+
+  function shuffle9() {
+    const a = [1,2,3,4,5,6,7,8,9];
+    for (let i = 8; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function isOK(grid, idx, val) {
+    const r = Math.floor(idx / 9), c = idx % 9;
+    for (let i = 0; i < 9; i++) {
+      if (grid[r * 9 + i] === val || grid[i * 9 + c] === val) return false;
+    }
+    const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+    for (let dr = 0; dr < 3; dr++)
+      for (let dc = 0; dc < 3; dc++)
+        if (grid[(br + dr) * 9 + bc + dc] === val) return false;
+    return true;
+  }
+
+  function solve(grid, rand = false) {
+    const idx = grid.indexOf(0);
+    if (idx === -1) return true;
+    const nums = rand ? shuffle9() : [1,2,3,4,5,6,7,8,9];
+    for (const v of nums) {
+      if (isOK(grid, idx, v)) {
+        grid[idx] = v;
+        if (solve(grid, rand)) return true;
+        grid[idx] = 0;
+      }
+    }
+    return false;
+  }
+
+  function countSols(grid, max = 2) {
+    const idx = grid.indexOf(0);
+    if (idx === -1) return 1;
+    let n = 0;
+    for (let v = 1; v <= 9; v++) {
+      if (isOK(grid, idx, v)) {
+        grid[idx] = v;
+        n += countSols(grid, max);
+        grid[idx] = 0;
+        if (n >= max) return n;
+      }
+    }
+    return n;
+  }
+
+  function newPuzzle() {
+    solution.fill(0);
+    solve(solution, true);
+    puzzle = [...solution];
+
+    // Remove cells while keeping a unique solution (medium: ~46 removed)
+    const order = [...Array(81).keys()].sort(() => Math.random() - 0.5);
+    let removed = 0;
+    for (const idx of order) {
+      const bk = puzzle[idx];
+      puzzle[idx] = 0;
+      if (countSols([...puzzle], 2) !== 1) puzzle[idx] = bk;
+      else if (++removed >= 46) break;
+    }
+
+    givens   = new Set(puzzle.flatMap((v, i) => v ? [i] : []));
+    userGrid = [...puzzle];
+    selected = -1;
+    completed = false;
+    gameScore = 0;
+  }
+
+  newPuzzle();
+
+  function render() {
+    ctx.fillStyle = '#0a0f1e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Subtle group highlight (row + col + box of selected cell)
+    if (selected !== -1) {
+      const sr = Math.floor(selected / 9), sc = selected % 9;
+      ctx.fillStyle = 'rgba(56,189,248,0.06)';
+      ctx.fillRect(OX, OY + sr * CELL, GS, CELL);
+      ctx.fillRect(OX + sc * CELL, OY, CELL, GS);
+      ctx.fillRect(OX + Math.floor(sc / 3) * 3 * CELL, OY + Math.floor(sr / 3) * 3 * CELL, CELL * 3, CELL * 3);
+    }
+
+    for (let i = 0; i < 81; i++) {
+      const r = Math.floor(i / 9), c = i % 9;
+      const x = OX + c * CELL, y = OY + r * CELL;
+      const val = userGrid[i];
+      const isGiven   = givens.has(i);
+      const isSelected = selected === i;
+      const isError   = !isGiven && val !== 0 && val !== solution[i];
+      const sameNum   = selected !== -1 && val !== 0 && val === userGrid[selected] && i !== selected;
+
+      if (isSelected) {
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+      } else if (sameNum) {
+        ctx.fillStyle = 'rgba(56,189,248,0.22)';
+        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+      }
+
+      if (val) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillStyle = isGiven ? '#f1f5f9' : isError ? '#ef4444' : '#38bdf8';
+        ctx.fillText(val, x + CELL / 2, y + CELL / 2);
+      }
+    }
+
+    // Grid lines — thin for cells, thick for 3×3 boxes
+    for (let i = 0; i <= 9; i++) {
+      const box = i % 3 === 0;
+      ctx.strokeStyle = box ? '#64748b' : '#1e293b';
+      ctx.lineWidth   = box ? 2 : 1;
+      ctx.beginPath(); ctx.moveTo(OX + i * CELL, OY); ctx.lineTo(OX + i * CELL, OY + GS); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(OX, OY + i * CELL); ctx.lineTo(OX + GS, OY + i * CELL); ctx.stroke();
+    }
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
+    ctx.strokeRect(OX, OY, GS, GS);
+
+    // Status line below grid
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    if (completed) {
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 14px Orbitron, Arial';
+      ctx.fillText('PUZZLE SOLVED!', canvas.width / 2, OY + GS + 20);
+    } else {
+      ctx.fillStyle = '#475569';
+      ctx.font = '12px Arial';
+      ctx.fillText('Click a cell · 1-9 to fill · Backspace to erase · Arrow keys to move', canvas.width / 2, OY + GS + 20);
+    }
+    _gameScoreEl.textContent = gameScore;
+  }
+
+  function checkDone() {
+    const total = 81 - givens.size;
+    let correct = 0;
+    for (let i = 0; i < 81; i++) if (!givens.has(i) && userGrid[i] === solution[i]) correct++;
+    gameScore = correct;
+    if (correct === total) {
+      completed = true;
+      gameScore = 100;
+      gameRunning = false;
+      render();
+      stopGame();
+    }
+  }
+
+  canvas.onclick = (e) => {
+    if (!gameRunning) return;
+    const rect = canvas.getBoundingClientRect();
+    const c = Math.floor(((e.clientX - rect.left) * canvas.width / rect.width - OX) / CELL);
+    const r = Math.floor(((e.clientY - rect.top) * canvas.height / rect.height - OY) / CELL);
+    if (c >= 0 && c < 9 && r >= 0 && r < 9) { selected = r * 9 + c; render(); }
+  };
+
+  addGameListener(document, 'keydown', (e) => {
+    if (!gameRunning) return;
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) e.preventDefault();
+
+    if (selected === -1) { selected = puzzle.findIndex(v => v === 0); render(); return; }
+
+    const r = Math.floor(selected / 9), c = selected % 9;
+    if      (e.key === 'ArrowRight') selected = r * 9 + (c + 1) % 9;
+    else if (e.key === 'ArrowLeft')  selected = r * 9 + (c + 8) % 9;
+    else if (e.key === 'ArrowDown')  selected = ((r + 1) % 9) * 9 + c;
+    else if (e.key === 'ArrowUp')    selected = ((r + 8) % 9) * 9 + c;
+    else if (e.key >= '1' && e.key <= '9' && !givens.has(selected)) {
+      userGrid[selected] = +e.key;
+      checkDone();
+    } else if ((e.key === 'Backspace' || e.key === 'Delete') && !givens.has(selected)) {
+      userGrid[selected] = 0;
+    }
+    render();
+  });
+
+  render();
 }
 
 // Initialize games
